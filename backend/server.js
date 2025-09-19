@@ -46,6 +46,8 @@ app.get('/', (req, res) => {
 });
 
 console.log('[Init] Routes mounted: /api/auth, /api/maids, /api/properties, /api/shops, /api/hacks, /api/health, /api/admin, /api/proxy');
+console.log('[Info] Environment:', process.env.NODE_ENV || 'development');
+console.log('[Info] MongoDB URI configured:', process.env.MONGODB_URI ? 'Yes' : 'No');
 
 // Serve built frontend assets (images) so the frontend can reference http://localhost:5000/assets/*.jpg
 const assetsDir = path.join(__dirname, '../frontend/dist/assets');
