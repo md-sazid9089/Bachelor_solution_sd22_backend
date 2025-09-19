@@ -62,23 +62,40 @@ const PORT = process.env.PORT || 5000;
 //   .catch(err => console.error('MongoDB connection error:', err));
 let isConnected = false;
 async function connectMongoDB() {
+  if (isConnected) {
+    return;
+  }
+  
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
-      useUnifiedTopology: true
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
     });
     isConnected = true;
     console.log('Connected to MongoDB');
   } catch (error) {
     console.error('MongoDB connection error:', error);
+    isConnected = false;
+    throw error;
   }
 }
-//add middleware to check connection before handling requests
+
+// Add middleware to check connection before handling requests
 app.use(async (req, res, next) => {
-  if (!isConnected) {
-    await connectMongoDB();
+  try {
+    if (!isConnected) {
+      await connectMongoDB();
+    }
+    next();
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    res.status(500).json({ 
+      error: 'Database connection failed', 
+      message: 'Unable to connect to MongoDB. Please check environment variables.' 
+    });
   }
-  next();
 });
 //do not use app.listen inside mongoose.connect callback
 module.exports = app;
