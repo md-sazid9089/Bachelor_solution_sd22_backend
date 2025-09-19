@@ -27,6 +27,24 @@ app.use('/api/health', healthRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/proxy', proxyRoutes);
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Bachelor Solution API is running!',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth',
+      maids: '/api/maids',
+      properties: '/api/properties',
+      shops: '/api/shops',
+      hacks: '/api/hacks',
+      health: '/api/health',
+      admin: '/api/admin',
+      proxy: '/api/proxy'
+    }
+  });
+});
+
 console.log('[Init] Routes mounted: /api/auth, /api/maids, /api/properties, /api/shops, /api/hacks, /api/health, /api/admin, /api/proxy');
 
 // Serve built frontend assets (images) so the frontend can reference http://localhost:5000/assets/*.jpg
