@@ -58,7 +58,7 @@ const shops = [
 ];
 
 async function seedShops() {
-  const BASE_URL = 'https://bachelor-solution-sd22-backend-ji8f.vercel.app';
+  const BASE_URL = 'https://bachelor-solution-sd22-backend-ji8f-30ikovjgb.vercel.app';
   for (const shop of shops) {
     try {
       const res = await axios.post(`${BASE_URL}/api/shops`, shop);
