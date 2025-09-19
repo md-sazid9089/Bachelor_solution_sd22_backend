@@ -36,9 +36,31 @@ console.log('[Init] Static assets served from', assetsDir, 'at /assets');
 
 const PORT = process.env.PORT || 5000;
 
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
+// mongoose.connect(process.env.MONGODB_URI)
+//   .then(() => {
+//     console.log('Connected to MongoDB');
+//     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+//   })
+//   .catch(err => console.error('MongoDB connection error:', err));
+let isConnected = false;
+async function connectMongoDB() {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+    isConnected = true;
     console.log('Connected to MongoDB');
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  })
-  .catch(err => console.error('MongoDB connection error:', err));
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+  }
+}
+//add middleware to check connection before handling requests
+app.use(async (req, res, next) => {
+  if (!isConnected) {
+    await connectMongoDB();
+  }
+  next();
+});
+//do not use app.listen inside mongoose.connect callback
+module.exports = app;
