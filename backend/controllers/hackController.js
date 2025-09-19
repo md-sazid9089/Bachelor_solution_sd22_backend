@@ -3,12 +3,19 @@ const Hack = require('../models/Hack');
 // List hacks (optionally filter by category)
 exports.list = async (req, res) => {
   try {
+    console.log('📍 Fetching hacks from database...');
     const { category } = req.query;
     const filter = category && category !== 'all' ? { category } : {};
-    const hacks = await Hack.find(filter).sort({ createdAt: -1 });
+    const hacks = await Hack.find(filter).sort({ createdAt: -1 }).maxTimeMS(15000);
+    console.log(`✅ Found ${hacks.length} hacks`);
     res.json(hacks);
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Error fetching hacks:', err.message);
+    if (err.name === 'MongooseError' && err.message.includes('buffering timed out')) {
+      res.status(503).json({ error: 'Database connection timeout. Please try again.' });
+    } else {
+      res.status(500).json({ message: 'Server error', details: err.message });
+    }
   }
 };
 

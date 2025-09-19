@@ -3,10 +3,17 @@ const Property = require('../models/Property');
 // Get all properties
 exports.getProperties = async (req, res) => {
   try {
-    const properties = await Property.find();
+    console.log('📍 Fetching properties from database...');
+    const properties = await Property.find().maxTimeMS(15000); // 15 second timeout
+    console.log(`✅ Found ${properties.length} properties`);
     res.json(properties);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ Error fetching properties:', err.message);
+    if (err.name === 'MongooseError' && err.message.includes('buffering timed out')) {
+      res.status(503).json({ error: 'Database connection timeout. Please try again.' });
+    } else {
+      res.status(500).json({ error: err.message });
+    }
   }
 };
 

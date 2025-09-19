@@ -63,6 +63,23 @@ const PORT = process.env.PORT || 5000;
 //   })
 //   .catch(err => console.error('MongoDB connection error:', err));
 let isConnected = false;
+
+// Handle mongoose connection events
+mongoose.connection.on('connected', () => {
+  console.log('✅ Mongoose connected to MongoDB');
+  isConnected = true;
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('❌ Mongoose connection error:', err);
+  isConnected = false;
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('⚠️ Mongoose disconnected from MongoDB');
+  isConnected = false;
+});
+
 async function connectMongoDB() {
   if (isConnected) {
     return;
@@ -72,13 +89,18 @@ async function connectMongoDB() {
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+      serverSelectionTimeoutMS: 10000, // Increased timeout
+      socketTimeoutMS: 45000,
+      bufferCommands: false, // Disable mongoose buffering
+      bufferMaxEntries: 0, // Disable mongoose buffering
+      maxPoolSize: 10, // Maintain up to 10 socket connections
+      serverSelectionRetryDelayMS: 1000, // Retry every second
+      heartbeatFrequencyMS: 10000, // Send a ping every 10 seconds
     });
     isConnected = true;
-    console.log('Connected to MongoDB');
+    console.log('✅ Connected to MongoDB');
   } catch (error) {
-    console.error('MongoDB connection error:', error);
+    console.error('❌ MongoDB connection error:', error);
     isConnected = false;
     throw error;
   }
@@ -88,14 +110,22 @@ async function connectMongoDB() {
 app.use(async (req, res, next) => {
   try {
     if (!isConnected) {
+      console.log('🔄 Attempting to connect to MongoDB...');
+      await connectMongoDB();
+    }
+    // Test the connection
+    if (mongoose.connection.readyState !== 1) {
+      console.log('🔄 Reconnecting to MongoDB...');
+      isConnected = false;
       await connectMongoDB();
     }
     next();
   } catch (error) {
-    console.error('Database connection failed:', error);
-    res.status(500).json({ 
+    console.error('❌ Database connection failed:', error.message);
+    res.status(503).json({ 
       error: 'Database connection failed', 
-      message: 'Unable to connect to MongoDB. Please check environment variables.' 
+      message: 'Unable to connect to MongoDB. Please try again in a moment.',
+      details: error.message
     });
   }
 });

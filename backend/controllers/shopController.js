@@ -3,10 +3,17 @@ const Shop = require('../models/Shop');
 // Get all shops
 exports.getShops = async (req, res) => {
   try {
-    const shops = await Shop.find();
+    console.log('📍 Fetching shops from database...');
+    const shops = await Shop.find().maxTimeMS(15000); // 15 second timeout
+    console.log(`✅ Found ${shops.length} shops`);
     res.json(shops);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ Error fetching shops:', err.message);
+    if (err.name === 'MongooseError' && err.message.includes('buffering timed out')) {
+      res.status(503).json({ error: 'Database connection timeout. Please try again.' });
+    } else {
+      res.status(500).json({ error: err.message });
+    }
   }
 };
 

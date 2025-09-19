@@ -14,26 +14,43 @@ const ADMIN_EMAIL = 'sazid.cse.20230104062@aust.edu';
 // Admin login
 exports.adminLogin = async (req, res) => {
   try {
+    console.log('🔐 Admin login attempt:', req.body.email);
     const { email, password } = req.body;
+    
+    if (!email || !password) {
+      console.log('❌ Missing email or password');
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
     
     // Check if email is admin email
     if (email !== ADMIN_EMAIL) {
+      console.log('❌ Unauthorized admin access attempt:', email);
       return res.status(401).json({ message: 'Unauthorized: Admin access only' });
     }
     
     // Find user with admin email
-    const user = await User.findOne({ email });
+    console.log('📍 Looking for admin user in database...');
+    const user = await User.findOne({ email }).maxTimeMS(15000);
     if (!user) {
+      console.log('❌ Admin user not found in database:', email);
       return res.status(404).json({ message: 'Admin user not found' });
     }
     
     // Check password
+    console.log('🔍 Validating admin password...');
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
+      console.log('❌ Invalid admin password for:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
+    if (!process.env.JWT_SECRET) {
+      console.error('❌ JWT_SECRET not configured');
+      return res.status(500).json({ message: 'Server configuration error' });
+    }
+    
     // Generate admin token
+    console.log('🎫 Generating admin token...');
     const token = jwt.sign(
       { 
         userId: user._id, 
@@ -44,6 +61,7 @@ exports.adminLogin = async (req, res) => {
       { expiresIn: '24h' }
     );
     
+    console.log('✅ Admin login successful:', email);
     res.json({
       token,
       user: {
@@ -54,7 +72,12 @@ exports.adminLogin = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('❌ Admin login error:', error.message);
+    if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
+      res.status(503).json({ message: 'Database connection timeout. Please try again.' });
+    } else {
+      res.status(500).json({ message: 'Server error', error: error.message });
+    }
   }
 };
 
